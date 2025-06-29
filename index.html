@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📖 Scrapbook Digital - Vanilla JS</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@400;500;600;700&family=Dancing+Script:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="header">
+            <h1 class="title">📖 Scrapbook Digital</h1>
+            <p class="subtitle">Kumpulkan kenangan indah Anda</p>
+        </header>
+
+        <!-- Tools -->
+        <div class="tools-container">
+            <button id="addPhotoBtn" class="tool-btn primary">
+                <span class="icon">📷</span>
+                Tambah Foto
+            </button>
+
+            <div class="text-input-group">
+                <input type="text" id="textInput" placeholder="Tulis teks..." class="text-input">
+                <button id="addTextBtn" class="tool-btn">
+                    <span class="icon">✏️</span>
+                </button>
+            </div>
+
+            <div class="sticker-group">
+                <button class="sticker-btn" data-emoji="❤️">❤️</button>
+                <button class="sticker-btn" data-emoji="⭐">⭐</button>
+                <button class="sticker-btn" data-emoji="🌟">🌟</button>
+                <button class="sticker-btn" data-emoji="🎈">🎈</button>
+                <button class="sticker-btn" data-emoji="🌸">🌸</button>
+                <button class="sticker-btn" data-emoji="🦋">🦋</button>
+                <button class="sticker-btn" data-emoji="🎉">🎉</button>
+                <button class="sticker-btn" data-emoji="🌈">🌈</button>
+            </div>
+
+            <button id="templateBtn" class="tool-btn">
+                <span class="icon">🎨</span>
+                Template
+            </button>
+        </div>
+
+        <!-- Scrapbook Container -->
+        <div class="scrapbook-container">
+            <!-- Book Shadow -->
+            <div class="book-shadow"></div>
+            
+            <!-- Book Cover -->
+            <div class="book-cover">
+                <!-- Book Binding -->
+                <div class="book-binding">
+                    <div class="rivet"></div>
+                    <div class="rivet"></div>
+                    <div class="rivet"></div>
+                    <div class="rivet"></div>
+                    <div class="rivet"></div>
+                    <div class="rivet"></div>
+                    <div class="rivet"></div>
+                    <div class="rivet"></div>
+                </div>
+
+                <!-- Page Container -->
+                <div class="page-container">
+                    <div id="currentPage" class="scrapbook-page">
+                        <!-- Page content will be dynamically added here -->
+                        <div class="page-number">Halaman 1</div>
+                        <div class="decorative-corner"></div>
+                    </div>
+                </div>
+
+                <!-- Navigation Buttons -->
+                <button id="prevBtn" class="nav-btn prev-btn" disabled>
+                    <span>‹</span>
+                </button>
+                <button id="nextBtn" class="nav-btn next-btn">
+                    <span>›</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Page Indicators -->
+        <div id="pageIndicators" class="page-indicators">
+            <button class="indicator active" data-page="0"></button>
+            <button class="indicator" data-page="1"></button>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="action-buttons">
+            <button id="addPageBtn" class="action-btn success">
+                ➕ Tambah Halaman
+            </button>
+            <button id="exportBtn" class="action-btn primary">
+                📄 Ekspor ke PDF
+            </button>
+        </div>
+
+        <!-- Instructions -->
+        <div class="instructions">
+            <h3>🎨 Cara Menggunakan:</h3>
+            <div class="instruction-grid">
+                <div>• Klik "Tambah Foto" untuk upload gambar</div>
+                <div>• Tulis teks dan tekan Enter atau klik ✏️</div>
+                <div>• Klik emoji untuk menambah sticker</div>
+                <div>• Drag & drop untuk memindahkan elemen</div>
+                <div>• Gunakan panah untuk berpindah halaman</div>
+                <div>• Klik indikator bulat untuk loncat ke halaman</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hidden file input -->
+    <input type="file" id="fileInput" accept="image/*" style="display: none;">
+
+    <!-- Template Modal -->
+    <div id="templateModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>🎨 Pilih Template Scrapbook</h2>
+                <button class="close-btn" id="closeTemplateModal">×</button>
+            </div>
+            <div class="template-grid">
+                <div class="template-card" data-theme="vintage">
+                    <div class="template-preview vintage-preview">📸</div>
+                    <h3>Vintage Classic</h3>
+                    <p>Gaya klasik dengan warna hangat</p>
+                    <div class="color-palette">
+                        <div class="color-dot" style="background: #F5E6D3;"></div>
+                        <div class="color-dot" style="background: #E8D5B7;"></div>
+                        <div class="color-dot" style="background: #D4C4A8;"></div>
+                    </div>
+                </div>
+                
+                <div class="template-card" data-theme="modern">
+                    <div class="template-preview modern-preview">✨</div>
+                    <h3>Modern Minimalist</h3>
+                    <p>Desain bersih dan modern</p>
+                    <div class="color-palette">
+                        <div class="color-dot" style="background: #FFFFFF;"></div>
+                        <div class="color-dot" style="background: #F8F9FA;"></div>
+                        <div class="color-dot" style="background: #E9ECEF;"></div>
+                    </div>
+                </div>
+                
+                <div class="template-card" data-theme="cute">
+                    <div class="template-preview cute-preview">🌸</div>
+                    <h3>Cute & Sweet</h3>
+                    <p>Tema manis dengan warna pastel</p>
+                    <div class="color-palette">
+                        <div class="color-dot" style="background: #FFE4E1;"></div>
+                        <div class="color-dot" style="background: #FFB6C1;"></div>
+                        <div class="color-dot" style="background: #FFC0CB;"></div>
+                    </div>
+                </div>
+                
+                <div class="template-card" data-theme="nature">
+                    <div class="template-preview nature-preview">🌿</div>
+                    <h3>Nature Fresh</h3>
+                    <p>Tema alam dengan warna hijau</p>
+                    <div class="color-palette">
+                        <div class="color-dot" style="background: #F0F8E8;"></div>
+                        <div class="color-dot" style="background: #E8F5E8;"></div>
+                        <div class="color-dot" style="background: #D4F1D4;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Photo Editor Modal -->
+    <div id="photoEditorModal" class="modal">
+        <div class="modal-content large">
+            <div class="modal-header">
+                <h2>🎨 Edit Foto</h2>
+                <button class="close-btn" id="closePhotoEditor">×</button>
+            </div>
+            <div class="photo-editor-content">
+                <div class="photo-preview">
+                    <img id="editingPhoto" src="/placeholder.svg" alt="Preview">
+                </div>
+                <div class="editor-controls">
+                    <div class="control-group">
+                        <label>☀️ Kecerahan</label>
+                        <input type="range" id="brightnessSlider" min="0" max="200" value="100">
+                        <span id="brightnessValue">100%</span>
+                    </div>
+                    <div class="control-group">
+                        <label>🔆 Kontras</label>
+                        <input type="range" id="contrastSlider" min="0" max="200" value="100">
+                        <span id="contrastValue">100%</span>
+                    </div>
+                    <div class="control-group">
+                        <label>🎨 Saturasi</label>
+                        <input type="range" id="saturationSlider" min="0" max="200" value="100">
+                        <span id="saturationValue">100%</span>
+                    </div>
+                    <div class="filter-buttons">
+                        <button class="filter-btn" data-filter="none">Original</button>
+                        <button class="filter-btn" data-filter="vintage">Vintage</button>
+                        <button class="filter-btn" data-filter="bw">B&W</button>
+                        <button class="filter-btn" data-filter="warm">Warm</button>
+                        <button class="filter-btn" data-filter="cool">Cool</button>
+                    </div>
+                    <div class="editor-actions">
+                        <button id="resetPhoto" class="action-btn">🔄 Reset</button>
+                        <button id="savePhoto" class="action-btn success">✅ Simpan</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- PDF Export Modal -->
+    <div id="pdfExportModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>📄 Ekspor ke PDF</h2>
+                <button class="close-btn" id="closePdfExport">×</button>
+            </div>
+            <div class="pdf-export-content">
+                <div class="export-options">
+                    <h3>Pilihan Export:</h3>
+                    <div class="option-group">
+                        <label>
+                            <input type="radio" name="exportType" value="all" checked>
+                            Semua Halaman
+                        </label>
+                        <label>
+                            <input type="radio" name="exportType" value="current">
+                            Halaman Saat Ini
+                        </label>
+                        <label>
+                            <input type="radio" name="exportType" value="range">
+                            Range Halaman
+                        </label>
+                    </div>
+                
+                    <div id="rangeOptions" class="range-options" style="display: none;">
+                        <label>Dari halaman:</label>
+                        <input type="number" id="fromPage" min="1" value="1">
+                        <label>Sampai halaman:</label>
+                        <input type="number" id="toPage" min="1" value="1">
+                    </div>
+
+                    <div class="pdf-settings">
+                        <h4>Pengaturan PDF:</h4>
+                        <div class="setting-row">
+                            <label>Orientasi:</label>
+                            <select id="pdfOrientation">
+                                <option value="landscape">Landscape (Horizontal)</option>
+                                <option value="portrait">Portrait (Vertikal)</option>
+                            </select>
+                        </div>
+                        <div class="setting-row">
+                            <label>Ukuran Kertas:</label>
+                            <select id="pdfSize">
+                                <option value="a4">A4</option>
+                                <option value="a3">A3</option>
+                                <option value="letter">Letter</option>
+                            </select>
+                        </div>
+                        <div class="setting-row">
+                            <label>Kualitas:</label>
+                            <select id="pdfQuality">
+                                <option value="high">Tinggi (File Besar)</option>
+                                <option value="medium" selected>Sedang (Recommended)</option>
+                                <option value="low">Rendah (File Kecil)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="export-progress" id="exportProgress" style="display: none;">
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="progressFill"></div>
+                        </div>
+                        <div class="progress-text" id="progressText">Memproses...</div>
+                    </div>
+
+                    <div class="export-actions">
+                        <button id="startPdfExport" class="action-btn success">
+                            📄 Mulai Export
+                        </button>
+                        <button id="cancelPdfExport" class="action-btn">
+                            ❌ Batal
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
