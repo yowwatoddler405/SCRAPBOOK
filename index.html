@@ -2,12 +2,30 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Scrapbook Digital">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#92400e">
+    
     <title>📖 Scrapbook Digital - Vanilla JS</title>
+    
+    <!-- Preload critical fonts -->
+    <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@400;500;600;700&family=Dancing+Script:wght@400;500;600;700&display=swap" as="style">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@400;500;600;700&family=Dancing+Script:wght@400;500;600;700&display=swap">
+    
+    <!-- PWA manifest -->
+    <link rel="manifest" href="manifest.json">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📖</text></svg>">
+    
     <link rel="stylesheet" href="style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@400;500;600;700&family=Dancing+Script:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    
+    <!-- PDF libraries with fallback -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" defer></script>
 </head>
 <body>
     <div class="app-container">
@@ -109,9 +127,12 @@
                 <div>• Klik "Tambah Foto" untuk upload gambar</div>
                 <div>• Tulis teks dan tekan Enter atau klik ✏️</div>
                 <div>• Klik emoji untuk menambah sticker</div>
-                <div>• Drag & drop untuk memindahkan elemen</div>
+                <div class="mobile-instruction">• Tap & drag untuk memindahkan elemen</div>
+                <div class="desktop-instruction">• Drag & drop untuk memindahkan elemen</div>
                 <div>• Gunakan panah untuk berpindah halaman</div>
                 <div>• Klik indikator bulat untuk loncat ke halaman</div>
+                <div class="mobile-instruction">• Pinch to zoom pada foto (double tap untuk edit)</div>
+                <div class="desktop-instruction">• Double click foto untuk edit</div>
             </div>
         </div>
     </div>

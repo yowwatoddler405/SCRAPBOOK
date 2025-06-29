@@ -24,17 +24,86 @@ class ScrapbookApp {
     this.isFlipping = false
     this.editingPhotoId = null
 
+    // Responsive properties
+    this.isMobile = window.innerWidth <= 768
+    this.isTablet = window.innerWidth > 768 && window.innerWidth <= 1024
+    this.isTouch = "ontouchstart" in window || navigator.maxTouchPoints > 0
+
     this.init()
   }
 
   init() {
+    this.setupResponsive()
     this.bindEvents()
     this.renderCurrentPage()
     this.updatePageIndicators()
     this.updateNavigationButtons()
-
-    // Add some sample content
     this.addSampleContent()
+  }
+
+  setupResponsive() {
+    // Update responsive properties on resize
+    window.addEventListener("resize", () => {
+      this.isMobile = window.innerWidth <= 768
+      this.isTablet = window.innerWidth > 768 && window.innerWidth <= 1024
+      this.updateResponsiveElements()
+    })
+
+    // Handle orientation change
+    window.addEventListener("orientationchange", () => {
+      setTimeout(() => {
+        this.updateResponsiveElements()
+      }, 100)
+    })
+
+    // Initial responsive setup
+    this.updateResponsiveElements()
+  }
+
+  updateResponsiveElements() {
+    const pageElement = document.getElementById("currentPage")
+
+    // Adjust page size based on screen size
+    if (this.isMobile) {
+      pageElement.style.width = window.innerWidth < 480 ? "280px" : "400px"
+      pageElement.style.height = window.innerWidth < 480 ? "200px" : "280px"
+    } else if (this.isTablet) {
+      pageElement.style.width = "500px"
+      pageElement.style.height = "350px"
+    } else {
+      pageElement.style.width = "600px"
+      pageElement.style.height = "400px"
+    }
+
+    // Update existing elements positions if needed
+    this.constrainElementsToPage()
+  }
+
+  constrainElementsToPage() {
+    const pageElement = document.getElementById("currentPage")
+    const pageRect = pageElement.getBoundingClientRect()
+
+    // Constrain all elements to new page bounds
+    const elements = pageElement.querySelectorAll("[data-type]")
+    elements.forEach((element) => {
+      const rect = element.getBoundingClientRect()
+      const maxX = pageRect.width - rect.width
+      const maxY = pageRect.height - rect.height
+
+      const currentX = Number.parseInt(element.style.left) || 0
+      const currentY = Number.parseInt(element.style.top) || 0
+
+      const constrainedX = Math.max(0, Math.min(currentX, maxX))
+      const constrainedY = Math.max(0, Math.min(currentY, maxY))
+
+      if (currentX !== constrainedX || currentY !== constrainedY) {
+        element.style.left = `${constrainedX}px`
+        element.style.top = `${constrainedY}px`
+
+        // Update data
+        this.updateElementPosition(element.dataset.id, element.dataset.type, constrainedX, constrainedY)
+      }
+    })
   }
 
   bindEvents() {
@@ -73,10 +142,12 @@ class ScrapbookApp {
     // File input
     document.getElementById("fileInput").addEventListener("change", (e) => this.handleFileUpload(e))
 
-    // Drag and drop
-    document.addEventListener("mousedown", (e) => this.handleMouseDown(e))
-    document.addEventListener("mousemove", (e) => this.handleMouseMove(e))
-    document.addEventListener("mouseup", (e) => this.handleMouseUp(e))
+    // Touch and mouse events
+    if (this.isTouch) {
+      this.bindTouchEvents()
+    } else {
+      this.bindMouseEvents()
+    }
 
     // Template modal
     document.getElementById("closeTemplateModal").addEventListener("click", () => this.closeTemplateModal())
@@ -97,36 +168,115 @@ class ScrapbookApp {
         this.closeAllModals()
       }
     })
+
+    // Keyboard navigation
+    this.bindKeyboardEvents()
   }
 
-  bindPhotoEditorEvents() {
-    document.getElementById("closePhotoEditor").addEventListener("click", () => this.closePhotoEditor())
+  bindTouchEvents() {
+    let touchStarted = false
 
-    // Sliders
-    const sliders = ["brightness", "contrast", "saturation"]
-    sliders.forEach((slider) => {
-      const element = document.getElementById(`${slider}Slider`)
-      const valueElement = document.getElementById(`${slider}Value`)
+    document.addEventListener(
+      "touchstart",
+      (e) => {
+        const element = e.target.closest("[data-type]")
+        if (!element) return
 
-      element.addEventListener("input", (e) => {
-        const value = e.target.value
-        valueElement.textContent = `${value}%`
-        this.updatePhotoPreview()
-      })
+        touchStarted = true
+        const touch = e.touches[0]
+        const rect = element.getBoundingClientRect()
+
+        this.draggedElement = element
+        this.dragOffset = {
+          x: touch.clientX - rect.left,
+          y: touch.clientY - rect.top,
+        }
+
+        element.classList.add("dragging")
+
+        // Prevent scrolling while dragging
+        e.preventDefault()
+      },
+      { passive: false },
+    )
+
+    document.addEventListener(
+      "touchmove",
+      (e) => {
+        if (!this.draggedElement || !touchStarted) return
+
+        e.preventDefault()
+
+        const touch = e.touches[0]
+        const pageRect = document.getElementById("currentPage").getBoundingClientRect()
+        const newX = touch.clientX - pageRect.left - this.dragOffset.x
+        const newY = touch.clientY - pageRect.top - this.dragOffset.y
+
+        // Get current page dimensions
+        const pageWidth = pageRect.width
+        const pageHeight = pageRect.height
+        const elementRect = this.draggedElement.getBoundingClientRect()
+
+        const maxX = pageWidth - elementRect.width
+        const maxY = pageHeight - elementRect.height
+
+        const constrainedX = Math.max(0, Math.min(newX, maxX))
+        const constrainedY = Math.max(0, Math.min(newY, maxY))
+
+        this.draggedElement.style.left = `${constrainedX}px`
+        this.draggedElement.style.top = `${constrainedY}px`
+
+        this.updateElementPosition(
+          this.draggedElement.dataset.id,
+          this.draggedElement.dataset.type,
+          constrainedX,
+          constrainedY,
+        )
+      },
+      { passive: false },
+    )
+
+    document.addEventListener("touchend", (e) => {
+      if (this.draggedElement && touchStarted) {
+        this.draggedElement.classList.remove("dragging")
+        this.draggedElement = null
+        touchStarted = false
+      }
     })
+  }
 
-    // Filter buttons
-    document.querySelectorAll(".filter-btn").forEach((btn) => {
-      btn.addEventListener("click", (e) => {
-        document.querySelectorAll(".filter-btn").forEach((b) => b.classList.remove("active"))
-        e.target.classList.add("active")
-        this.updatePhotoPreview()
-      })
+  bindMouseEvents() {
+    document.addEventListener("mousedown", (e) => this.handleMouseDown(e))
+    document.addEventListener("mousemove", (e) => this.handleMouseMove(e))
+    document.addEventListener("mouseup", (e) => this.handleMouseUp(e))
+  }
+
+  bindKeyboardEvents() {
+    document.addEventListener("keydown", (e) => {
+      // Only handle if not typing in input
+      if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") return
+
+      switch (e.key) {
+        case "ArrowLeft":
+          e.preventDefault()
+          this.previousPage()
+          break
+        case "ArrowRight":
+          e.preventDefault()
+          this.nextPage()
+          break
+        case "Escape":
+          e.preventDefault()
+          this.closeAllModals()
+          break
+        case "Enter":
+          if (e.target.classList.contains("indicator")) {
+            e.preventDefault()
+            e.target.click()
+          }
+          break
+      }
     })
-
-    // Editor actions
-    document.getElementById("resetPhoto").addEventListener("click", () => this.resetPhotoEditor())
-    document.getElementById("savePhoto").addEventListener("click", () => this.savePhotoEdits())
   }
 
   openFileDialog() {
@@ -144,14 +294,27 @@ class ScrapbookApp {
     }
   }
 
+  // Update photo creation for responsive sizing
   addPhoto(src) {
+    // Adjust photo size based on screen size
+    let photoWidth = 200
+    let photoHeight = 150
+
+    if (this.isMobile) {
+      photoWidth = window.innerWidth < 480 ? 120 : 160
+      photoHeight = window.innerWidth < 480 ? 90 : 120
+    } else if (this.isTablet) {
+      photoWidth = 180
+      photoHeight = 135
+    }
+
     const photo = {
       id: Date.now().toString(),
       src: src,
-      x: Math.random() * 300 + 50,
-      y: Math.random() * 200 + 50,
-      width: 200,
-      height: 150,
+      x: Math.random() * (this.getPageWidth() - photoWidth - 20) + 10,
+      y: Math.random() * (this.getPageHeight() - photoHeight - 20) + 10,
+      width: photoWidth,
+      height: photoHeight,
       rotation: (Math.random() - 0.5) * 10,
       brightness: 100,
       contrast: 100,
@@ -163,17 +326,24 @@ class ScrapbookApp {
     this.renderCurrentPage()
   }
 
+  // Update text creation for responsive sizing
   addText() {
     const textInput = document.getElementById("textInput")
     const text = textInput.value.trim()
 
     if (text) {
+      // Adjust font size based on screen size
+      let fontSize = 18
+      if (this.isMobile) {
+        fontSize = window.innerWidth < 480 ? 14 : 16
+      }
+
       const textElement = {
         id: Date.now().toString(),
         content: text,
-        x: Math.random() * 300 + 50,
-        y: Math.random() * 200 + 50,
-        fontSize: 18,
+        x: Math.random() * (this.getPageWidth() - 200) + 10,
+        y: Math.random() * (this.getPageHeight() - 50) + 10,
+        fontSize: fontSize,
         color: "#374151",
         fontFamily: "Dancing Script",
       }
@@ -184,13 +354,20 @@ class ScrapbookApp {
     }
   }
 
+  // Update sticker creation for responsive sizing
   addSticker(emoji) {
+    // Adjust sticker size based on screen size
+    let stickerSize = 30
+    if (this.isMobile) {
+      stickerSize = window.innerWidth < 480 ? 20 : 25
+    }
+
     const sticker = {
       id: Date.now().toString(),
       emoji: emoji,
-      x: Math.random() * 400 + 50,
-      y: Math.random() * 300 + 50,
-      size: 30,
+      x: Math.random() * (this.getPageWidth() - 50) + 10,
+      y: Math.random() * (this.getPageHeight() - 50) + 10,
+      size: stickerSize,
     }
 
     this.pages[this.currentPageIndex].stickers.push(sticker)
@@ -335,6 +512,18 @@ class ScrapbookApp {
     document.body.style.cursor = "grabbing"
   }
 
+  // Helper methods for responsive dimensions
+  getPageWidth() {
+    const pageElement = document.getElementById("currentPage")
+    return pageElement.offsetWidth || 600
+  }
+
+  getPageHeight() {
+    const pageElement = document.getElementById("currentPage")
+    return pageElement.offsetHeight || 400
+  }
+
+  // Update mouse handling for better responsive support
   handleMouseMove(event) {
     if (!this.draggedElement) return
 
@@ -344,10 +533,13 @@ class ScrapbookApp {
     const newX = event.clientX - pageRect.left - this.dragOffset.x
     const newY = event.clientY - pageRect.top - this.dragOffset.y
 
-    // Constrain to page bounds
+    // Use actual page dimensions
+    const pageWidth = pageRect.width
+    const pageHeight = pageRect.height
     const elementRect = this.draggedElement.getBoundingClientRect()
-    const maxX = 600 - elementRect.width
-    const maxY = 400 - elementRect.height
+
+    const maxX = pageWidth - elementRect.width
+    const maxY = pageHeight - elementRect.height
 
     const constrainedX = Math.max(0, Math.min(newX, maxX))
     const constrainedY = Math.max(0, Math.min(newY, maxY))
@@ -355,7 +547,6 @@ class ScrapbookApp {
     this.draggedElement.style.left = `${constrainedX}px`
     this.draggedElement.style.top = `${constrainedY}px`
 
-    // Update data
     this.updateElementPosition(
       this.draggedElement.dataset.id,
       this.draggedElement.dataset.type,
@@ -871,15 +1062,43 @@ class ScrapbookApp {
     }, 3000)
   }
 
+  // Add method to handle viewport changes
+  handleViewportChange() {
+    // Update meta viewport for better mobile experience
+    let viewport = document.querySelector("meta[name=viewport]")
+    if (!viewport) {
+      viewport = document.createElement("meta")
+      viewport.name = "viewport"
+      document.getElementsByTagName("head")[0].appendChild(viewport)
+    }
+
+    if (this.isMobile) {
+      viewport.content = "width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    } else {
+      viewport.content = "width=device-width, initial-scale=1.0"
+    }
+  }
+
+  // Update sample content for responsive
   addSampleContent() {
-    // Add sample photo to first page
+    // Adjust sample content size based on screen
+    let photoWidth = 300
+    let photoHeight = 200
+    let fontSize = 24
+
+    if (this.isMobile) {
+      photoWidth = window.innerWidth < 480 ? 150 : 200
+      photoHeight = window.innerWidth < 480 ? 100 : 133
+      fontSize = window.innerWidth < 480 ? 16 : 20
+    }
+
     const samplePhoto = {
       id: "sample-1",
       src: "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZGRkIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPjMwMCB4IDIwMDwvdGV4dD48L3N2Zz4=",
-      x: 50,
-      y: 80,
-      width: 300,
-      height: 200,
+      x: 20,
+      y: 30,
+      width: photoWidth,
+      height: photoHeight,
       rotation: -2,
       brightness: 100,
       contrast: 100,
@@ -890,16 +1109,28 @@ class ScrapbookApp {
     const sampleText = {
       id: "sample-text-1",
       content: "Kenangan Indah",
-      x: 100,
-      y: 320,
-      fontSize: 24,
+      x: 30,
+      y: this.getPageHeight() - 60,
+      fontSize: fontSize,
       color: "#8B4513",
       fontFamily: "Dancing Script",
     }
 
     const sampleStickers = [
-      { id: "sample-sticker-1", emoji: "❤️", x: 380, y: 100, size: 30 },
-      { id: "sample-sticker-2", emoji: "⭐", x: 420, y: 250, size: 25 },
+      {
+        id: "sample-sticker-1",
+        emoji: "❤️",
+        x: this.getPageWidth() - 60,
+        y: 30,
+        size: this.isMobile ? 20 : 30,
+      },
+      {
+        id: "sample-sticker-2",
+        emoji: "⭐",
+        x: this.getPageWidth() - 80,
+        y: this.getPageHeight() - 80,
+        size: this.isMobile ? 18 : 25,
+      },
     ]
 
     this.pages[0].photos.push(samplePhoto)
@@ -933,3 +1164,58 @@ function getRandomPosition(maxWidth, maxHeight, elementWidth, elementHeight) {
 
 // Export for potential use in other scripts
 window.ScrapbookApp = ScrapbookApp
+
+// PWA Service Worker Registration
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker
+      .register("/sw.js")
+      .then((registration) => {
+        console.log("SW registered: ", registration)
+      })
+      .catch((registrationError) => {
+        console.log("SW registration failed: ", registrationError)
+      })
+  })
+}
+
+// Add to home screen prompt
+let deferredPrompt
+window.addEventListener("beforeinstallprompt", (e) => {
+  e.preventDefault()
+  deferredPrompt = e
+
+  // Show install button or banner
+  const installBtn = document.createElement("button")
+  installBtn.textContent = "📱 Install App"
+  installBtn.className = "action-btn primary"
+  installBtn.style.position = "fixed"
+  installBtn.style.bottom = "20px"
+  installBtn.style.right = "20px"
+  installBtn.style.zIndex = "1000"
+
+  installBtn.addEventListener("click", () => {
+    deferredPrompt.prompt()
+    deferredPrompt.userChoice.then((choiceResult) => {
+      if (choiceResult.outcome === "accepted") {
+        console.log("User accepted the install prompt")
+      }
+      deferredPrompt = null
+      installBtn.remove()
+    })
+  })
+
+  document.body.appendChild(installBtn)
+
+  // Auto hide after 10 seconds
+  setTimeout(() => {
+    if (installBtn.parentNode) {
+      installBtn.remove()
+    }
+  }, 10000)
+})
+
+// Handle app installed
+window.addEventListener("appinstalled", (evt) => {
+  console.log("App was installed")
+})
